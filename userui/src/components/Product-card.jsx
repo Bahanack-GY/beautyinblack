@@ -6,7 +6,7 @@ function ProductCard(){
             <div className="flex flex-col mt-2">
                 <span className="font-bold text-lg">Nom du produit</span>
                 <span className="text-gray-600">Description du produit</span>
-                <span className="font-bold text-[#B76E79] mt-1">€99.99</span>
+                <span className="font-bold text-[#B76E79] mt-1">99.99 FCFA</span>
             </div>
 
          </div>
