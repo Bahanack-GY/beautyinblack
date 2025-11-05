@@ -4,8 +4,13 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 
+/**
+ * Point d'entrée de l'application React
+ * Configure le routage avec BrowserRouter et rend l'application dans le DOM
+ */
 createRoot(document.getElementById('root')).render(
   <StrictMode>
+    {/* BrowserRouter permet la navigation entre les pages avec React Router */}
     <BrowserRouter>
       <App />
     </BrowserRouter>
