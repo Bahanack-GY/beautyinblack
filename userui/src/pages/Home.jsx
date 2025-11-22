@@ -16,7 +16,7 @@ function Home() {
     const { scrollY } = useScroll();
 
     // Effet parallaxe qui commence après la fin de l'animation de texte
-    // Le contenu remonte progressivement lors du scroll
+    // Le contenu remonte progressivement lors du défilement
     const contentY = useTransform(scrollY, [20, 2000], [0, -100]);
     const contentOpacity = useTransform(scrollY, [100, 150], [1, 2]);
 

@@ -24,7 +24,7 @@ function Navbar(){
     ];
 
     return(
-        // Navbar fixe en bas avec coins arrondis
+        // Barre de navigation fixe en bas avec coins arrondis
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg">
             <div className="flex items-center justify-around w-full px-2 py-5">
                 {navItems.map((item) => {

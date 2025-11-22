@@ -38,7 +38,7 @@ function ProductCard({ id, name = "HydroSync Pro Water Bottle", description = "S
                         key={size}
                         className="text-xs text-gray-100 rounded-full px-2 py-0.5 bg-[#ffa4a4b7]" 
                         onClick={(e) => {
-                            e.stopPropagation(); // Empêche la navigation au clic
+                            e.stopPropagation(); // Empêcher la navigation au clic
                             setSelectedSize(size);
                         }}
                     >
@@ -50,7 +50,7 @@ function ProductCard({ id, name = "HydroSync Pro Water Bottle", description = "S
                         key={size}
                         className="text-xs text-gray-500 border border-gray-100 rounded-full px-2 py-1" 
                         onClick={(e) => {
-                            e.stopPropagation(); // Empêche la navigation au clic
+                            e.stopPropagation(); // Empêcher la navigation au clic
                             setSelectedSize(size);
                         }}
                     >
@@ -69,7 +69,7 @@ function ProductCard({ id, name = "HydroSync Pro Water Bottle", description = "S
             
             {/* Prix et bouton d'ajout au panier */}
             <div className="flex items-center justify-between mt-2">
-                 <p className="text-lg font-bold text-gray-500">{price}</p>
+                 <p className="text-lg font-bold text-gray-500">{price} FCFA</p>
                  {/* Bouton d'ajout au panier - empêche la propagation du clic */}
                  <motion.button
                      whileTap={{ scale: 0.9 }}

@@ -1,85 +1,40 @@
-import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import Header from "../components/Header";
 import Navbar from "../components/Navbar";
 import { BiTrash, BiPlus, BiMinus } from "react-icons/bi";
+import { useCart, useUpdateCartItem, useRemoveFromCart } from "../hooks";
 
 /**
  * Page Cart - Gestion du panier d'achat
  * Affiche tous les articles du panier avec possibilité de modifier les quantités et supprimer des articles
- * Utilise localStorage pour persister les données du panier
  */
 function Cart() {
-    const [cartItems, setCartItems] = useState([]);
-    // Références pour éviter les boucles infinies lors de la synchronisation avec localStorage
-    const isInitialMount = useRef(true);
-    const isLoadingFromStorage = useRef(false);
+    const navigate = useNavigate();
+    const { data: cartData, isLoading } = useCart();
+    const updateCartItem = useUpdateCartItem();
+    const removeFromCart = useRemoveFromCart();
 
-    // Chargement du panier depuis localStorage au montage du composant
-    useEffect(() => {
-        const loadCart = () => {
-            isLoadingFromStorage.current = true;
-            const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-            setCartItems(savedCart);
-        };
-        loadCart();
-        
-        // Écoute des mises à jour du panier depuis d'autres composants/pages (comme ProductDetails)
-        const handleCartUpdate = () => {
-            if (!isLoadingFromStorage.current) {
-                isLoadingFromStorage.current = true;
-                const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-                setCartItems(savedCart);
-            }
-        };
-        window.addEventListener('cartUpdated', handleCartUpdate);
-        window.addEventListener('storage', handleCartUpdate);
-        
-        return () => {
-            window.removeEventListener('cartUpdated', handleCartUpdate);
-            window.removeEventListener('storage', handleCartUpdate);
-        };
-    }, []);
-
-    // Sauvegarde du panier dans localStorage à chaque modification (sauf au chargement initial)
-    useEffect(() => {
-        if (isInitialMount.current) {
-            isInitialMount.current = false;
-            isLoadingFromStorage.current = false;
-            return;
-        }
-
-        if (!isLoadingFromStorage.current) {
-            localStorage.setItem('cart', JSON.stringify(cartItems));
-            // Dispatch d'un événement pour notifier les autres composants (comme ProductDetails pour le compteur)
-            window.dispatchEvent(new Event('cartUpdated'));
-        } else {
-            // Réinitialisation du flag après le chargement
-            isLoadingFromStorage.current = false;
-        }
-    }, [cartItems]);
+    const cartItems = cartData?.items || [];
+    const subtotal = cartData?.subtotal || 0;
+    const shipping = cartData?.shipping || 5000;
+    const total = cartData?.total || (subtotal + shipping);
 
     // Fonction pour modifier la quantité d'un article (augmenter ou diminuer)
-    const updateQuantity = (id, size, change) => {
-        setCartItems(cartItems.map(item => {
-            if (item.id === id && item.size === size) {
-                // La quantité minimale est 1
-                const newQuantity = Math.max(1, item.quantity + change);
-                return { ...item, quantity: newQuantity };
-            }
-            return item;
-        }));
+    const handleUpdateQuantity = (itemId, currentQuantity, change) => {
+        const newQuantity = Math.max(1, currentQuantity + change);
+        updateCartItem.mutate({
+            itemId,
+            data: { quantity: newQuantity }
+        });
     };
 
     // Fonction pour supprimer un article du panier
-    const removeItem = (id, size) => {
-        setCartItems(cartItems.filter(item => !(item.id === id && item.size === size)));
+    const handleRemoveItem = (itemId) => {
+        if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?")) {
+            removeFromCart.mutate(itemId);
+        }
     };
-
-    // Calculs des totaux pour le résumé de commande
-    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = 5000; // Frais de livraison fixes
-    const total = subtotal + shipping;
 
     return (
         <div className="flex flex-col bg-white min-h-screen w-screen pb-32">
@@ -92,7 +47,11 @@ function Cart() {
 
             {/* Contenu principal */}
             <div className="flex-1 px-5">
-                {cartItems.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <div className="text-gray-500">Chargement...</div>
+                    </div>
+                ) : cartItems.length === 0 ? (
                     // Message affiché quand le panier est vide
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
@@ -110,7 +69,7 @@ function Cart() {
                         <div className="space-y-0">
                             {cartItems.map((item, index) => (
                                 <motion.div
-                                    key={`${item.id}-${item.size}`}
+                                    key={item.id}
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: index * 0.1 }}
@@ -119,7 +78,7 @@ function Cart() {
                                         {/* Image du produit */}
                                         <div className="flex-shrink-0 mr-4">
                                             <img 
-                                                src={item.image} 
+                                                src={item.image || "https://via.placeholder.com/80"} 
                                                 alt={item.name}
                                                 className="w-20 h-20 object-cover rounded-lg"
                                             />
@@ -130,15 +89,16 @@ function Cart() {
                                             <h3 className="text-lg font-bold text-black mb-1">{item.name}</h3>
                                             <p className="text-sm text-gray-400 mb-2">{item.size}</p>
                                             <p className="text-base font-semibold text-black mb-3">
-                                                {item.price.toLocaleString()} FCFA
+                                                {item.price?.toLocaleString() || 0} FCFA
                                             </p>
                                             
                                             {/* Contrôles de quantité */}
                                             <div className="flex items-center gap-3 mb-3">
                                                 {/* Bouton pour diminuer la quantité */}
                                                 <button
-                                                    onClick={() => updateQuantity(item.id, item.size, -1)}
-                                                    className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-[#B76E79] hover:text-[#B76E79] transition-colors"
+                                                    onClick={() => handleUpdateQuantity(item.id, item.quantity, -1)}
+                                                    disabled={updateCartItem.isPending}
+                                                    className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-[#B76E79] hover:text-[#B76E79] transition-colors disabled:opacity-50"
                                                 >
                                                     <BiMinus size={16} />
                                                 </button>
@@ -148,15 +108,17 @@ function Cart() {
                                                 </span>
                                                 {/* Bouton pour augmenter la quantité */}
                                                 <button
-                                                    onClick={() => updateQuantity(item.id, item.size, 1)}
-                                                    className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-[#B76E79] hover:text-[#B76E79] transition-colors"
+                                                    onClick={() => handleUpdateQuantity(item.id, item.quantity, 1)}
+                                                    disabled={updateCartItem.isPending}
+                                                    className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center hover:border-[#B76E79] hover:text-[#B76E79] transition-colors disabled:opacity-50"
                                                 >
                                                     <BiPlus size={16} />
                                                 </button>
                                                 {/* Bouton pour supprimer l'article */}
                                                 <button
-                                                    onClick={() => removeItem(item.id, item.size)}
-                                                    className="ml-auto p-2 text-gray-400 hover:text-red-500 transition-colors"
+                                                    onClick={() => handleRemoveItem(item.id)}
+                                                    disabled={removeFromCart.isPending}
+                                                    className="ml-auto p-2 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-50"
                                                 >
                                                     <BiTrash size={20} />
                                                 </button>
@@ -186,7 +148,17 @@ function Cart() {
                                     <span className="text-lg font-bold text-[#B76E79]">{total.toLocaleString()} FCFA</span>
                                 </div>
                                 {/* Bouton pour passer la commande */}
-                                <button className="w-full mt-4 bg-[#B76E79] text-white py-4 rounded-full font-semibold text-lg hover:bg-[#A05A6A] transition-colors shadow-lg">
+                                <button 
+                                    onClick={() => {
+                                        const token = localStorage.getItem('token');
+                                        if (!token) {
+                                            navigate('/auth');
+                                        } else {
+                                            navigate('/checkout');
+                                        }
+                                    }}
+                                    className="w-full mt-4 bg-[#B76E79] text-white py-4 rounded-full font-semibold text-lg hover:bg-[#A05A6A] transition-colors shadow-lg"
+                                >
                                     Passer la commande
                                 </button>
                             </div>

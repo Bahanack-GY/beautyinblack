@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BiChevronLeft, BiChevronDown } from "react-icons/bi";
 import { BiBookmark, BiBookmarkHeart } from "react-icons/bi";
 import { CiShoppingBasket } from "react-icons/ci";
 import { BiStar } from "react-icons/bi";
-import logo from "../assets/logo.png";
+import { useProduct, useAddToCart, useCart, useFavorites, useAddFavorite, useRemoveFavorite } from "../hooks";
+import logo from "../assets/Logo.png";
 
 /**
  * Page ProductDetails - Détails d'un produit
@@ -15,50 +16,22 @@ function ProductDetails() {
     const navigate = useNavigate();
     const { id } = useParams(); // ID du produit depuis l'URL
     const [selectedSize, setSelectedSize] = useState(null);
-    const [isFavorite, setIsFavorite] = useState(false);
     const [expandedSection, setExpandedSection] = useState(null); // Section développée (description ou livraison)
-    const [cartCount, setCartCount] = useState(0); // Compteur d'articles dans le panier
-
-    // Données du produit - Dans une vraie app, on récupérerait le produit par ID depuis une API
-    const product = {
-        id: 1,
-        name: "Black Velvet",
-        category: "Parfum Femme",
-        description: "Parfum féminin élégant aux notes de rose et vanille. Une fragrance envoûtante qui révèle votre féminité avec grâce et sophistication.",
-        price: "85,000",
-        priceNumber: 85000, // Prix numérique pour les calculs
-        rating: 4.5,
-        images: [
-            "https://images.unsplash.com/photo-1541643600914-78b084683601?w=500",
-            "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=500",
-            "https://images.unsplash.com/photo-1588405748880-12d770463ef9?w=500",
-            "https://images.unsplash.com/photo-1595425970377-c970029944a6?w=500",
-            "https://images.unsplash.com/photo-1612817159949-195b6eb9e1af?w=500"
-        ],
-        sizes: ["30 ml", "50 ml", "100 ml"],
-        deliveryInfo: "Livraison gratuite sur toutes les commandes. Retours acceptés sous 30 jours.",
-        image: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=500"
-    };
-
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    // Chargement du compteur du panier depuis localStorage
-    useEffect(() => {
-        const loadCartCount = () => {
-            const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            setCartCount(totalItems);
-        };
-        loadCartCount();
-        // Écoute des changements de storage (depuis d'autres onglets/composants)
-        window.addEventListener('storage', loadCartCount);
-        // Vérification aussi lors du focus (pour les mises à jour dans le même onglet)
-        window.addEventListener('focus', loadCartCount);
-        return () => {
-            window.removeEventListener('storage', loadCartCount);
-            window.removeEventListener('focus', loadCartCount);
-        };
-    }, []);
+    // Récupérer les données du produit
+    const { data: product, isLoading: isLoadingProduct } = useProduct(id);
+    const { data: cartData } = useCart();
+    const { data: favorites = [] } = useFavorites();
+    const addToCartMutation = useAddToCart();
+    const addFavoriteMutation = useAddFavorite();
+    const removeFavoriteMutation = useRemoveFavorite();
+
+    // Vérifier si le produit est dans les favoris
+    const isFavorite = favorites.some(fav => fav.productId?.toString() === id || fav.productId === id);
+
+    // Calculer le nombre d'articles dans le panier
+    const cartCount = cartData?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
     // Fonction pour développer/réduire une section (description ou livraison)
     const toggleSection = (section) => {
@@ -73,39 +46,59 @@ function ProductDetails() {
             return;
         }
 
-        // Récupération du panier existant depuis localStorage
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        
-        // Vérification si l'article avec le même ID et la même taille existe déjà
-        const existingItemIndex = cart.findIndex(
-            item => item.id === parseInt(id) && item.size === selectedSize
-        );
-
-        if (existingItemIndex >= 0) {
-            // Incrémentation de la quantité si l'article existe déjà
-            cart[existingItemIndex].quantity += 1;
-        } else {
-            // Ajout d'un nouvel article au panier
-            cart.push({
-                id: parseInt(id),
-                name: product.name,
-                price: product.priceNumber,
-                size: selectedSize,
-                quantity: 1,
-                image: product.image
-            });
+        // Vérifier si l'utilisateur est authentifié
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/auth');
+            return;
         }
 
-        // Sauvegarde dans localStorage
-        localStorage.setItem('cart', JSON.stringify(cart));
-        
-        // Mise à jour du compteur du panier
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        setCartCount(totalItems);
-
-        // Déclenchement d'un événement personnalisé pour que les autres composants l'écoutent
-        window.dispatchEvent(new Event('cartUpdated'));
+        addToCartMutation.mutate({
+            productId: id.toString(),
+            size: selectedSize,
+            quantity: 1
+        }, {
+            onSuccess: () => {
+                alert("Produit ajouté au panier");
+            },
+            onError: (error) => {
+                alert(error.message || "Erreur lors de l'ajout au panier");
+            }
+        });
     };
+
+    // Fonction pour basculer le favori
+    const handleToggleFavorite = () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            navigate('/auth');
+            return;
+        }
+
+        if (isFavorite) {
+            removeFavoriteMutation.mutate(id);
+        } else {
+            addFavoriteMutation.mutate({ productId: id.toString() });
+        }
+    };
+
+    if (isLoadingProduct) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-gray-500">Chargement...</div>
+            </div>
+        );
+    }
+
+    if (!product) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-gray-500">Produit non trouvé</div>
+            </div>
+        );
+    }
+
+    const productImages = product.images || (product.image ? [product.image] : []);
 
     return (
         <div className="flex flex-col bg-white min-h-screen w-screen pb-20">
@@ -130,25 +123,27 @@ function ProductDetails() {
                 {/* Section image du produit avec carrousel */}
                 <div className="relative w-full">
                     <img 
-                        src={product.images[currentImageIndex]} 
+                        src={productImages[currentImageIndex] || product.image || "https://via.placeholder.com/500"} 
                         alt={product.name}
                         className="w-full h-96 object-cover"
                     />
                     
                     {/* Indicateurs du carrousel d'images */}
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
-                        {product.images.map((_, index) => (
-                            <div
-                                key={index}
-                                className={`h-1 rounded-full transition-all cursor-pointer ${
-                                    index === currentImageIndex 
-                                        ? 'bg-[#B76E79] w-6' 
-                                        : 'bg-gray-300 w-1'
-                                }`}
-                                onClick={() => setCurrentImageIndex(index)}
-                            />
-                        ))}
-                    </div>
+                    {productImages.length > 1 && (
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+                            {productImages.map((_, index) => (
+                                <div
+                                    key={index}
+                                    className={`h-1 rounded-full transition-all cursor-pointer ${
+                                        index === currentImageIndex 
+                                            ? 'bg-[#B76E79] w-6' 
+                                            : 'bg-gray-300 w-1'
+                                    }`}
+                                    onClick={() => setCurrentImageIndex(index)}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {/* Informations du produit */}
@@ -157,10 +152,12 @@ function ProductDetails() {
                     <div className="flex items-start justify-between mb-3">
                         <h1 className="text-2xl font-bold text-gray-900 flex-1">{product.name}</h1>
                         {/* Note du produit avec étoile */}
-                        <div className="flex items-center gap-1 ml-4">
-                            <BiStar className="text-[#B76E79]" size={20} />
-                            <span className="text-sm text-gray-400">({product.rating})</span>
-                        </div>
+                        {product.rating && (
+                            <div className="flex items-center gap-1 ml-4">
+                                <BiStar className="text-[#B76E79]" size={20} />
+                                <span className="text-sm text-gray-400">({product.rating})</span>
+                            </div>
+                        )}
                     </div>
                     <p className="text-xl font-bold text-gray-900">{product.price} FCFA</p>
 
@@ -170,7 +167,7 @@ function ProductDetails() {
                             <p className="text-base font-semibold text-gray-900">Taille:</p>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                            {product.sizes.map((size) => (
+                            {(product.sizes || []).map((size) => (
                                 <button
                                     key={size}
                                     onClick={() => setSelectedSize(size)}
@@ -222,7 +219,7 @@ function ProductDetails() {
                         </button>
                         {expandedSection === 'delivery' && (
                             <div className="px-2 py-3 text-sm text-gray-600">
-                                {product.deliveryInfo}
+                                {product.deliveryInfo || "Livraison gratuite sur toutes les commandes. Retours acceptés sous 30 jours."}
                             </div>
                         )}
                     </div>
@@ -233,7 +230,8 @@ function ProductDetails() {
             <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-5 py-4 flex items-center gap-4">
                 {/* Bouton favori avec changement d'icône selon l'état */}
                 <button
-                    onClick={() => setIsFavorite(!isFavorite)}
+                    onClick={handleToggleFavorite}
+                    disabled={addFavoriteMutation.isPending || removeFavoriteMutation.isPending}
                     className={`w-12 h-12 rounded-full flex items-center justify-center border-2 transition-colors ${
                         isFavorite 
                             ? 'bg-[#B76E79] border-[#B76E79] text-white' 
@@ -245,9 +243,10 @@ function ProductDetails() {
                 {/* Bouton principal d'ajout au panier */}
                 <button
                     onClick={handleAddToCart}
-                    className="flex-1 bg-[#B76E79] text-white py-4 rounded-xl font-semibold text-lg hover:bg-[#A05A6A] transition-colors"
+                    disabled={addToCartMutation.isPending}
+                    className="flex-1 bg-[#B76E79] text-white py-4 rounded-xl font-semibold text-lg hover:bg-[#A05A6A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Ajouter au panier
+                    {addToCartMutation.isPending ? 'Ajout...' : 'Ajouter au panier'}
                 </button>
             </div>
         </div>

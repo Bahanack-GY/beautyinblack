@@ -55,7 +55,7 @@ function VideoDisplay(){
             {/* Texte superposé avec effet de frappe */}
             <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-6xl md:text-8xl font-bold text-white text-center px-2"
-                     style={{ fontFamily: "'Brillant', cursive", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.1)' }}>
+                     style={{ fontFamily: "'Brillant', cursive", textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)' }}>
                     {characters.map((char, index) => (
                         <AnimatedCharacter
                             key={index}
