@@ -192,12 +192,18 @@ const OrderDetails = () => {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Articles de la commande</h2>
             <div className="space-y-4">
               {(orderData.items || []).map((item, idx) => (
-                <div key={item.id} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-20 h-20 object-cover rounded-lg"
-                  />
+                <div key={item.id || idx} className="flex gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-20 h-20 object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                      <Package size={32} className="text-gray-400" />
+                    </div>
+                  )}
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-900 dark:text-white">{item.name}</h3>
                     <p className="text-sm text-gray-500 mt-1">Taille: {item.size}</p>
