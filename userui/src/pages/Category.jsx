@@ -498,7 +498,7 @@ function Category() {
                             <input
                                 type="text"
                                 className="w-full rounded-full pl-12 pr-4 py-3 border-2 border-gray-200 text-black focus:border-[#B76E79] focus:outline-none transition-all duration-300 shadow-sm"
-                                placeholder="Rechercher un parfum..."
+                                placeholder="Rechercher un produit..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />

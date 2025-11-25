@@ -32,7 +32,7 @@ function VideoDisplay(){
     const videoRef = useRef(null);
 
     // Texte à afficher avec animation
-    const text = "Beuty in black";
+    const text = "Beauty in black";
     const characters = text.split("");
 
     return(
